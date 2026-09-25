@@ -61,9 +61,9 @@ export const api = {
     method: "POST",
     body: { expected_version: expectedVersion }
   }).then((r) => r.data),
-  assign: (id, assigneeId, expectedVersion, reason) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/assign", {
+  assign: (id, actorId, expectedVersion, reason, team) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/assign", {
     method: "POST",
-    body: { assignee_id: assigneeId, expected_version: expectedVersion, reason }
+    body: { actor_id: actorId, expected_version: expectedVersion, reason, team }
   }).then((r) => r.data),
   escalate: (id, expectedVersion, reason) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/escalate", {
     method: "POST",
@@ -88,6 +88,7 @@ export const api = {
   updateContact: (id, body) => request("/platform/v1/whatsapp/contacts/" + encodeURIComponent(id), { method: "PATCH", body }).then((r) => r.data),
 
   templates: (query) => request("/platform/v1/whatsapp/templates" + queryString(query)).then((r) => r.data),
+  template: (id) => request("/platform/v1/whatsapp/templates/" + encodeURIComponent(id)).then((r) => r.data),
   createTemplate: (body) => request("/platform/v1/whatsapp/templates", { method: "POST", body }).then((r) => r.data),
   updateTemplate: (id, body) => request("/platform/v1/whatsapp/templates/" + encodeURIComponent(id), { method: "PATCH", body }).then((r) => r.data),
 
@@ -98,7 +99,6 @@ export const api = {
   updateCampaign: (id, body) => request("/platform/v1/whatsapp/campaigns/" + encodeURIComponent(id), { method: "PATCH", body }).then((r) => r.data),
 
   sendMessage: (body) => {
-    const identity = sessionIdentity();
     const idempotencyKey = body.idempotency_key || makeId("wa-idem");
     return request("/platform/v1/whatsapp/messages", {
       method: "POST",
@@ -107,12 +107,7 @@ export const api = {
         "x-correlation-id": makeId("wa"),
         "idempotency-key": idempotencyKey
       },
-      body: {
-        ...body,
-        tenant_id: body.tenant_id || identity.tenantId,
-        requested_by: body.requested_by || identity.subject,
-        idempotency_key: idempotencyKey
-      }
+      body: { ...body, idempotency_key: idempotencyKey }
     }).then((r) => r.data);
   },
 

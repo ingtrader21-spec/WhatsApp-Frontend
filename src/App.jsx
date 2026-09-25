@@ -269,10 +269,6 @@ function InboxPage({ conversations, refreshConversations }) {
       await api.sendMessage({
         contact_id: contact.contact_id,
         campaign_id: "agent-console-direct",
-        recipient: contact.phone,
-        consent_status: contact.consent_status,
-        suppressed: Boolean(contact.suppressed),
-        opted_out: contact.consent_status === "opted_out" || Boolean(contact.opted_out),
         message: { type: "text", text: sendText.trim() }
       });
       setSendText("");

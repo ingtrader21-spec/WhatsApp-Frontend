@@ -1,42 +1,83 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { apiPaths, currentBackendApi, productionUrls } from "../src/endpoints.js";
+import { apiPaths, currentBackendApi, internalBackendApi, productionUrls } from "../src/endpoints.js";
 
-const publishedOpenApi = new Set([
+const browserOpenApi = new Set([
   "GET /healthz",
   "GET /readyz",
   "POST /platform/v1/whatsapp/contacts/eligibility",
   "POST /platform/v1/whatsapp/campaigns/validate",
-  "POST /platform/v1/whatsapp/messages"
+  "POST /platform/v1/whatsapp/messages",
+  "GET /platform/v1/whatsapp/conversations",
+  "GET /platform/v1/whatsapp/conversations/:conversationId",
+  "GET /platform/v1/whatsapp/conversations/:conversationId/timeline",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/claim",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/assign",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/escalate",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/resolve",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/reopen",
+  "POST /platform/v1/whatsapp/conversations/:conversationId/automation/:action",
+  "GET /platform/v1/whatsapp/dead-letters",
+  "POST /platform/v1/whatsapp/dead-letters/:deadLetterId/replay",
+  "GET /platform/v1/whatsapp/operations/:operationId",
+  "GET /platform/v1/whatsapp/me",
+  "GET /platform/v1/whatsapp/dashboard",
+  "GET /platform/v1/whatsapp/contacts",
+  "POST /platform/v1/whatsapp/contacts",
+  "GET /platform/v1/whatsapp/contacts/:contactId",
+  "PATCH /platform/v1/whatsapp/contacts/:contactId",
+  "GET /platform/v1/whatsapp/templates",
+  "POST /platform/v1/whatsapp/templates",
+  "GET /platform/v1/whatsapp/templates/:templateId",
+  "PATCH /platform/v1/whatsapp/templates/:templateId",
+  "GET /platform/v1/whatsapp/campaigns",
+  "POST /platform/v1/whatsapp/campaigns",
+  "GET /platform/v1/whatsapp/campaigns/:campaignId",
+  "PATCH /platform/v1/whatsapp/campaigns/:campaignId"
 ]);
 
-test("frontend catalog covers every currently published WhatsApp API endpoint", () => {
-  const frontend = new Set(currentBackendApi.map((item) => item.method + " " + item.path));
-  assert.deepEqual(frontend, publishedOpenApi);
+test("frontend catalog covers all 31 browser-facing operations in WhatsApp PR #11", () => {
+  const frontend = new Set(currentBackendApi.map((item) => item.method + " " + decodeURIComponent(item.path)));
+  assert.equal(frontend.size, 31);
+  assert.deepEqual(frontend, browserOpenApi);
 });
 
-test("browser-facing endpoint map never points at internal provider services", () => {
+test("every browser-facing operation has a concrete API client binding", () => {
+  const source = fs.readFileSync(new URL("../src/api.js", import.meta.url), "utf8");
+  for (const item of currentBackendApi) {
+    assert.ok(source.includes("  " + item.key + ":"), "missing API client binding: " + item.key);
+  }
+});
+
+test("internal API remains explicitly service-only and absent from browser bindings", () => {
+  const source = fs.readFileSync(new URL("../src/api.js", import.meta.url), "utf8");
+  assert.equal(internalBackendApi.length, 3);
+  for (const item of internalBackendApi) {
+    assert.ok(item.path.startsWith("/internal/"));
+    assert.ok(!source.includes("  " + item.key + ":"), "internal route leaked into browser client: " + item.key);
+  }
+});
+
+test("browser-facing endpoint map never points directly at provider services", () => {
   assert.equal(productionUrls.api, "https://api.codestra.co");
   assert.equal(apiPaths.messages, "/platform/v1/whatsapp/messages");
   for (const item of currentBackendApi) assert.ok(!item.path.startsWith("/internal/"));
 });
 
-test("current endpoints have concrete API client bindings", () => {
+test("sendMessage preserves backend authority for contact eligibility and actor identity", () => {
   const source = fs.readFileSync(new URL("../src/api.js", import.meta.url), "utf8");
-  for (const binding of ["health:", "ready:", "eligibility:", "validateCampaign:", "sendMessage:"]) {
-    assert.match(source, new RegExp(binding.replace(":", "\\:")));
+  assert.ok(source.includes("idempotency_key: idempotencyKey"));
+  const app = fs.readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.ok(app.includes("contact_id: contact.contact_id"));
+  assert.ok(app.includes('campaign_id: "agent-console-direct"'));
+  for (const stale of ["recipient: contact.phone", "consent_status: contact.consent_status", "suppressed:", "opted_out:"]) {
+    assert.ok(!app.includes(stale), "frontend must not duplicate backend contact authority: " + stale);
   }
 });
 
-
-test("sendMessage bridges the frontend model to the current backend contract", () => {
+test("conversation assignment uses the current actor_id contract", () => {
   const source = fs.readFileSync(new URL("../src/api.js", import.meta.url), "utf8");
-  for (const required of ["tenant_id:", "requested_by:", "idempotency_key:"]) {
-    assert.match(source, new RegExp(required.replace(":", "\\:")));
-  }
-  const app = fs.readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
-  for (const required of ["recipient: contact.phone", "consent_status: contact.consent_status", "suppressed:", "opted_out:"]) {
-    assert.ok(app.includes(required), "missing send contract field: " + required);
-  }
+  assert.ok(source.includes("body: { actor_id: actorId, expected_version: expectedVersion, reason, team }"));
+  assert.ok(!source.includes("assignee_id:"));
 });

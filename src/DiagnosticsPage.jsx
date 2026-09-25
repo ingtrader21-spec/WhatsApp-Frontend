@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, BadgeCheck, CircleAlert, RefreshCw, ShieldCheck } from "lucide-react";
 import { api } from "./api.js";
-import { currentBackendApi, plannedApplicationApi } from "./endpoints.js";
+import { currentBackendApi, internalBackendApi } from "./endpoints.js";
 
 function Result({ value }) {
   if (!value) return null;
@@ -102,7 +102,7 @@ export default function DiagnosticsPage() {
       </section>
 
       <section className="panel">
-        <div className="panel-head"><div><h3>Current backend API coverage</h3><p>Every endpoint published by the current WhatsApp OpenAPI contract has a frontend binding.</p></div></div>
+        <div className="panel-head"><div><h3>Browser API coverage</h3><p>Every browser-facing operation in the current WhatsApp PR #11 OpenAPI contract has a frontend client binding.</p></div></div>
         <div className="api-table">
           {currentBackendApi.map((entry) => (
             <div className="api-row" key={entry.method + entry.path}>
@@ -139,11 +139,11 @@ export default function DiagnosticsPage() {
       </div>
 
       <section className="panel">
-        <div className="panel-head"><div><h3>Planned application surfaces</h3><p>Frontend bindings that exist beyond the current backend OpenAPI guarantee.</p></div></div>
+        <div className="panel-head"><div><h3>Internal service-only API</h3><p>These operations are intentionally not callable from the browser; Middleware/provider services use them with internal authentication.</p></div></div>
         <div className="api-table">
-          {plannedApplicationApi.map((entry) => (
+          {internalBackendApi.map((entry) => (
             <div className="api-row" key={entry.method + entry.path}>
-              <code>{entry.method}</code><code>{entry.path}</code><span>{entry.purpose}</span><StateBadge ok={false}>planned</StateBadge>
+              <code>{entry.method}</code><code>{entry.path}</code><span>{entry.purpose}</span><StateBadge ok={false}>internal</StateBadge>
             </div>
           ))}
         </div>
