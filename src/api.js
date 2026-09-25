@@ -47,8 +47,12 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  health: () => request("/healthz").then((r) => r.data),
+  ready: () => request("/readyz").then((r) => r.data),
+
   me: () => request("/platform/v1/whatsapp/me").then((r) => r.data),
   dashboard: () => request("/platform/v1/whatsapp/dashboard").then((r) => r.data),
+  eligibility: (body) => request("/platform/v1/whatsapp/contacts/eligibility", { method: "POST", body }).then((r) => r.data),
 
   conversations: (query) => request("/platform/v1/whatsapp/conversations" + queryString(query)).then((r) => r.data),
   conversation: (id) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id)).then((r) => r.data),
@@ -56,6 +60,14 @@ export const api = {
   claim: (id, expectedVersion) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/claim", {
     method: "POST",
     body: { expected_version: expectedVersion }
+  }).then((r) => r.data),
+  assign: (id, assigneeId, expectedVersion, reason) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/assign", {
+    method: "POST",
+    body: { assignee_id: assigneeId, expected_version: expectedVersion, reason }
+  }).then((r) => r.data),
+  escalate: (id, expectedVersion, reason) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/escalate", {
+    method: "POST",
+    body: { expected_version: expectedVersion, reason }
   }).then((r) => r.data),
   resolve: (id, expectedVersion, reason) => request("/platform/v1/whatsapp/conversations/" + encodeURIComponent(id) + "/resolve", {
     method: "POST",
@@ -80,21 +92,43 @@ export const api = {
   updateTemplate: (id, body) => request("/platform/v1/whatsapp/templates/" + encodeURIComponent(id), { method: "PATCH", body }).then((r) => r.data),
 
   campaigns: (query) => request("/platform/v1/whatsapp/campaigns" + queryString(query)).then((r) => r.data),
+  campaign: (id) => request("/platform/v1/whatsapp/campaigns/" + encodeURIComponent(id)).then((r) => r.data),
+  validateCampaign: (body) => request("/platform/v1/whatsapp/campaigns/validate", { method: "POST", body }).then((r) => r.data),
   createCampaign: (body) => request("/platform/v1/whatsapp/campaigns", { method: "POST", body }).then((r) => r.data),
   updateCampaign: (id, body) => request("/platform/v1/whatsapp/campaigns/" + encodeURIComponent(id), { method: "PATCH", body }).then((r) => r.data),
 
-  sendMessage: (body) => request("/platform/v1/whatsapp/messages", {
-    method: "POST",
-    headers: {
-      "x-command-id": crypto.randomUUID(),
-      "x-correlation-id": makeId("wa"),
-      "idempotency-key": makeId("wa-idem")
-    },
-    body
-  }).then((r) => r.data),
+  sendMessage: (body) => {
+    const identity = sessionIdentity();
+    const idempotencyKey = body.idempotency_key || makeId("wa-idem");
+    return request("/platform/v1/whatsapp/messages", {
+      method: "POST",
+      headers: {
+        "x-command-id": crypto.randomUUID(),
+        "x-correlation-id": makeId("wa"),
+        "idempotency-key": idempotencyKey
+      },
+      body: {
+        ...body,
+        tenant_id: body.tenant_id || identity.tenantId,
+        requested_by: body.requested_by || identity.subject,
+        idempotency_key: idempotencyKey
+      }
+    }).then((r) => r.data);
+  },
 
   operation: (id) => request("/platform/v1/whatsapp/operations/" + encodeURIComponent(id), {
     headers: { "x-correlation-id": makeId("read") }
+  }).then((r) => r.data),
+
+  deadLetters: (query) => request("/platform/v1/whatsapp/dead-letters" + queryString(query)).then((r) => r.data),
+  replayDeadLetter: (id, reason) => request("/platform/v1/whatsapp/dead-letters/" + encodeURIComponent(id) + "/replay", {
+    method: "POST",
+    headers: {
+      "x-command-id": crypto.randomUUID(),
+      "x-correlation-id": makeId("replay"),
+      "idempotency-key": makeId("wa-replay")
+    },
+    body: { reason }
   }).then((r) => r.data)
 };
 

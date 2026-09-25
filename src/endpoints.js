@@ -68,3 +68,35 @@ export const publicApiUrls = Object.freeze({
   conversations: canonicalApiUrl(apiPaths.conversations),
   deadLetters: canonicalApiUrl(apiPaths.deadLetters)
 });
+
+
+export const currentBackendApi = Object.freeze([
+  { key: "health", method: "GET", path: apiPaths.health, purpose: "Application health" },
+  { key: "ready", method: "GET", path: apiPaths.ready, purpose: "Safe-mode and Middleware readiness" },
+  { key: "eligibility", method: "POST", path: apiPaths.eligibility, purpose: "Recipient eligibility decision" },
+  { key: "campaignValidation", method: "POST", path: apiPaths.campaignValidation, purpose: "Campaign validation" },
+  { key: "messages", method: "POST", path: apiPaths.messages, purpose: "Submit eligible message effect through Middleware V3" }
+]);
+
+export const plannedApplicationApi = Object.freeze([
+  { method: "GET", path: apiPaths.me, purpose: "Operator identity" },
+  { method: "GET", path: apiPaths.dashboard, purpose: "Operational dashboard" },
+  { method: "GET/POST", path: apiPaths.contacts, purpose: "Contact directory" },
+  { method: "GET/PATCH", path: apiPaths.contact(":contactId"), purpose: "Contact detail" },
+  { method: "GET/POST", path: apiPaths.templates, purpose: "Template workspace" },
+  { method: "GET/PATCH", path: apiPaths.template(":templateId"), purpose: "Template detail" },
+  { method: "GET/POST", path: apiPaths.campaigns, purpose: "Campaign workspace" },
+  { method: "GET/PATCH", path: apiPaths.campaign(":campaignId"), purpose: "Campaign detail" },
+  { method: "GET", path: apiPaths.conversations, purpose: "Inbox" },
+  { method: "GET", path: apiPaths.conversation(":conversationId"), purpose: "Conversation detail" },
+  { method: "GET", path: apiPaths.timeline(":conversationId"), purpose: "Conversation timeline" },
+  { method: "POST", path: apiPaths.claim(":conversationId"), purpose: "Claim conversation" },
+  { method: "POST", path: apiPaths.assign(":conversationId"), purpose: "Assign conversation" },
+  { method: "POST", path: apiPaths.escalate(":conversationId"), purpose: "Escalate conversation" },
+  { method: "POST", path: apiPaths.resolve(":conversationId"), purpose: "Resolve conversation" },
+  { method: "POST", path: apiPaths.reopen(":conversationId"), purpose: "Reopen conversation" },
+  { method: "POST", path: apiPaths.automation(":conversationId", ":action"), purpose: "Pause/resume automation" },
+  { method: "GET", path: apiPaths.deadLetters, purpose: "Dead-letter queue" },
+  { method: "POST", path: apiPaths.replayDeadLetter(":deadLetterId"), purpose: "Safe replay request" },
+  { method: "GET", path: apiPaths.operation(":operationId"), purpose: "Operation readback" }
+]);

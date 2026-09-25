@@ -6,6 +6,7 @@ import {
   Settings, ShieldCheck, Sparkles, UserRoundCheck, UsersRound
 } from "lucide-react";
 import { api, baseUrl } from "./api.js";
+import DiagnosticsPage from "./DiagnosticsPage.jsx";
 import {
   authConfigured, completeLoginFromRedirect, isDevBypass, logout, sessionIdentity, startLogin
 } from "./auth.js";
@@ -16,6 +17,7 @@ const NAV = [
   ["contacts", "Contacts", ContactRound],
   ["templates", "Templates", BookOpenText],
   ["campaigns", "Campaigns", Megaphone],
+  ["diagnostics", "API & Safety", Activity],
   ["settings", "Settings", Settings]
 ];
 
@@ -160,7 +162,7 @@ function MetricCard({ icon: Icon, label, value, detail, tone = "green" }) {
 }
 
 function OverviewPage({ dashboard, conversations, onOpenInbox, safeMode }) {
-  if (!dashboard) return <LoadingBlock />;
+  if (!dashboard) return <EmptyState icon={BarChart3} title="Dashboard API not published yet" body="The current backend contract is healthy without the planned dashboard read model. Use API & Safety for live endpoint checks." />;
   return (
     <div className="page-stack">
       {safeMode && (
@@ -267,6 +269,10 @@ function InboxPage({ conversations, refreshConversations }) {
       await api.sendMessage({
         contact_id: contact.contact_id,
         campaign_id: "agent-console-direct",
+        recipient: contact.phone,
+        consent_status: contact.consent_status,
+        suppressed: Boolean(contact.suppressed),
+        opted_out: contact.consent_status === "opted_out" || Boolean(contact.opted_out),
         message: { type: "text", text: sendText.trim() }
       });
       setSendText("");
@@ -580,15 +586,19 @@ export default function App() {
     if (!sessionIdentity().authenticated) return;
     setRefreshing(true);
     try {
-      const [me, dash, inbox] = await Promise.all([
+      const [me, dash, inbox] = await Promise.allSettled([
         api.me(),
         api.dashboard(),
         api.conversations({ limit: 100 })
       ]);
-      setProfile(me);
-      setDashboard(dash);
-      setConversations(inbox.items || []);
-      setError(null);
+
+      if (me.status === "fulfilled") setProfile(me.value);
+      if (dash.status === "fulfilled") setDashboard(dash.value);
+      if (inbox.status === "fulfilled") setConversations(inbox.value.items || []);
+
+      const rejected = [me, dash, inbox].filter((result) => result.status === "rejected");
+      const hardFailure = rejected.find((result) => result.reason?.status !== 404);
+      setError(hardFailure?.reason || null);
     } catch (e) {
       setError(e);
     } finally {
@@ -617,6 +627,7 @@ export default function App() {
           {page === "contacts" && <ContactsPage />}
           {page === "templates" && <TemplatesPage />}
           {page === "campaigns" && <CampaignsPage />}
+          {page === "diagnostics" && <DiagnosticsPage />}
           {page === "settings" && <SettingsPage identity={identity} profile={profile} dashboard={dashboard} />}
         </main>
       </div>
