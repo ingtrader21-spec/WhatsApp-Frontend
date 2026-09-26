@@ -4,8 +4,8 @@ import fs from "node:fs";
 import { apiPaths, currentBackendApi, internalBackendApi, productionUrls } from "../src/endpoints.js";
 
 const browserOpenApi = new Set([
-  "GET /healthz",
-  "GET /readyz",
+  "GET /platform/v1/whatsapp/healthz",
+  "GET /platform/v1/whatsapp/readyz",
   "POST /platform/v1/whatsapp/contacts/eligibility",
   "POST /platform/v1/whatsapp/campaigns/validate",
   "POST /platform/v1/whatsapp/messages",

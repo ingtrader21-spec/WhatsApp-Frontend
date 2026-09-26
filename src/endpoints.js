@@ -12,8 +12,8 @@ export const productionUrls = Object.freeze({
 const whatsapp = "/platform/v1/whatsapp";
 
 export const apiPaths = Object.freeze({
-  health: "/healthz",
-  ready: "/readyz",
+  health: "/platform/v1/whatsapp/healthz",
+  ready: "/platform/v1/whatsapp/readyz",
 
   me: whatsapp + "/me",
   dashboard: whatsapp + "/dashboard",
