@@ -81,3 +81,23 @@ test("conversation assignment uses the current actor_id contract", () => {
   assert.ok(source.includes("body: { actor_id: actorId, expected_version: expectedVersion, reason, team }"));
   assert.ok(!source.includes("assignee_id:"));
 });
+
+
+test("professional UX keeps critical controls interactive and fail-closed", () => {
+  const source = fs.readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  for (const required of [
+    "Search customer, number or status",
+    "Conversation filters",
+    "Pause automation",
+    "Escalate",
+    "window.confirm",
+    "Outbound messaging is locked",
+    "Enter to send",
+    "notification-popover"
+  ]) {
+    assert.ok(source.includes(required), "missing professional UX contract: " + required);
+  }
+  assert.ok(source.includes('disabled={safeMode || !sendText.trim() || actionBusy === "send"}'));
+  assert.ok(source.includes('api.setAutomation('));
+  assert.ok(source.includes('api.escalate('));
+});
